@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
 // Create transporter
 const createTransporter = () => {
@@ -50,6 +52,27 @@ const sendContactNotification = async (contactData) => {
   const adminEmail = process.env.ADMIN_EMAIL || 'estimatinghub788@gmail.com';
   const fromAddress = process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@estimatinghub.com';
 
+  // Prepare attachment (read file into memory to avoid path issues)
+  let attachments = [];
+  if (filePath) {
+    try {
+      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+      const fileBuffer = fs.readFileSync(absolutePath);
+      attachments.push({
+        filename: fileName || path.basename(absolutePath),
+        content: fileBuffer,
+        contentDisposition: 'attachment'
+      });
+    } catch (readErr) {
+      console.warn('⚠️  Could not read attachment from disk, falling back to path:', readErr && readErr.message);
+      attachments.push({
+        filename: fileName || 'attachment',
+        path: filePath,
+        contentDisposition: 'attachment'
+      });
+    }
+  }
+
   // Email to admin
   const adminMailOptions = {
     from: fromAddress,
@@ -84,13 +107,7 @@ const sendContactNotification = async (contactData) => {
         </div>
       </div>
     `,
-    attachments: filePath ? [
-      {
-        filename: fileName || 'attachment',
-        path: filePath,
-        contentDisposition: 'attachment'
-      }
-    ] : [],
+    attachments,
   };
 
   // Auto-reply to customer
@@ -184,7 +201,7 @@ const sendConsultationConfirmation = async (consultationData) => {
   const transporter = createTransporter();
 
   const { name, email, phone, company, preferredDate, preferredTime, calendlyEventUrl, message } = consultationData;
-  const adminEmail = process.env.ADMIN_EMAIL || 'ingt1175@gmail.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'estimatinghub788@gmail.com';
   const fromAddress = process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@estimatinghub.com';
 
   // Admin notification
